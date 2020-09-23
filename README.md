@@ -1,1 +1,1 @@
-# ps_acl_for_delte
+# ps_acl_for_delete
