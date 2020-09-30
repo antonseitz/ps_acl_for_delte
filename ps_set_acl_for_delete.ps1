@@ -45,7 +45,13 @@ exit}
 
 if( $takeownership -or $all){
 
-takeown.exe  /d Y /r /f $path
+
+if ((Get-Item $path) -is [System.IO.DirectoryInfo]) {
+takeown.exe   /r /f $path
+}
+else
+{takeown.exe  /d Y /f $path}
+
 
 
 
