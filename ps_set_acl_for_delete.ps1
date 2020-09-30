@@ -2,7 +2,8 @@
 # Script takes ownership of file or folder and subfolders
 # and sets ACL to fullControl for executing current user.
 # After that file / folder can be deleted by current user
-
+# 
+# TODO Not working with absolute paths
 
 param(
 
@@ -43,14 +44,19 @@ write "-setfullrights = set full rights of folder recursivly "
 write "-delete  = deletes  folder recursivly "
 exit}
 
+
+
+if ((Get-Item $path) -is [System.IO.DirectoryInfo]) {$dir = $true}
+else {$dir=$false}
+
 if( $takeownership -or $all){
 
 
-if ((Get-Item $path) -is [System.IO.DirectoryInfo]) {
-takeown.exe   /r /f $path
+if ($dir) {
+takeown.exe  /d J /r /f $path
 }
 else
-{takeown.exe  /d Y /f $path}
+{takeown.exe   /f $path}
 
 
 
@@ -77,12 +83,15 @@ $Prop=[System.Security.AccessControl.PropagationFlags]::None
 
 
 
-
+if($dir){
 $AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($env:UserName,"FullControl",$Inherit,$Prop,"Allow")
+}
+else {
+$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("MUSEUMSBUND\aseitz","FullControl","Allow")}
 
 $acl.SetAccessRule($AccessRule)
 
-#$acl.SetAccessRuleProtection($false, $true)
+$acl.SetAccessRuleProtection($true, $false)
 }
 
 if( $delete -or $all){
