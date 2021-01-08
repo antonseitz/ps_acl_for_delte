@@ -8,11 +8,11 @@ param(
 
 # ARE YOU ADMIN ?
 
-$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
-if ( -not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) ){
-write "YOU HAVE NO ADMIN RIGHTS: EXITING!"
-exit 1
-}
+#$currentPrincipal = New-Object Security.Principal.WindowsPrincipal([Security.Principal.WindowsIdentity]::GetCurrent())
+#if ( -not $currentPrincipal.IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator) ){
+#write "YOU HAVE NO ADMIN RIGHTS: EXITING!"
+#exit 1
+#}
 
 
 if( !$path){
