@@ -1,4 +1,4 @@
-# 
+﻿# 
 # Script takes ownership of file or folder and subfolders
 # and sets ACL to fullControl for executing current user.
 # After that file / folder can be deleted by current user
@@ -35,7 +35,7 @@ exit 1
 
 # USAGE
 
-if (( !$delete -and   !$takeownership -and !$setfullrights -and !$all -and !$showrights)  -or (! $path)) {
+if (( !$delete -and   !$takeownership -and !$setfullrights -and !$all -and !$showrights)  -or (! $path) ) {
 
 write-host("Usage: "  +  $MyInvocation.MyCommand.Name + " -delete | -setfullrights  | -takeownership  | -debug  folder ") #[-debug] [-dryrun] ")
 write "-debug = a lot of output"
@@ -44,32 +44,59 @@ write "-setfullrights = set full rights of folder recursivly "
 write "-delete  = deletes  folder recursivly "
 exit}
 
+ $testpath = Test-Path $path 
+if (! $testpath) {
+
+"Path " + $path + " not found!"
+exit
+}
+
+
+$username=$env:Userdomain + "\" + $env:UserName
 
 
 if ((Get-Item $path) -is [System.IO.DirectoryInfo]) {$dir = $true}
 else {$dir=$false}
 
 if( $takeownership -or $all){
+" 
 
 
+TAKE OWNERSHIP  ?
+"
+$confirm = read-host -prompt "hit enter to continue"
 if ($dir) {
-takeown.exe  /d J /r /f $path
+takeown.exe  /f $path /r  /d Y 
 }
 else
 {takeown.exe   /f $path}
 
 
-
-
-# $object = New-Object System.Security.Principal.Ntaccount($env:UserName)
-#$acl.Setowner($object)
 }
 
 if ( $setfullrights -or $all) {
+" 
+
+
+SETFULLRIGHTS for my username ?
+"
+$confirm = read-host -prompt "hit enter to continue"
+$acl = Get-Acl -path $path
+
+
+$rules = $acl.access | Where-Object { 
+    (-not $_.IsInherited) -and 
+    $_.IdentityReference -like ($username)
+}
+ForEach($rule in $rules) {
+    $acl.RemoveAccessRule($rule) | Out-Null
+}
+
+
+Set-ACL -Path $path -AclObject $acl
 
 
 $acl = Get-Acl -path $path
-
 
 $Inherit=[System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor [System.Security.AccessControl.InheritanceFlags]::ObjectInherit
 #$Inherit=[System.Security.AccessControl.InheritanceFlags]::ContainerInherit 
@@ -81,18 +108,60 @@ $Inherit=[System.Security.AccessControl.InheritanceFlags]::ContainerInherit -bor
 $Prop=[System.Security.AccessControl.PropagationFlags]::None
 
 
+$acl.SetAccessRuleProtection($false, $false)
+
 
 
 if($dir){
-$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($env:UserName,"FullControl",$Inherit,$Prop,"Allow")
+$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($username,"FullControl",$Inherit,$Prop,"Allow")
 }
 else {
-$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule("MUSEUMSBUND\aseitz","FullControl","Allow")}
+$AccessRule = New-Object System.Security.AccessControl.FileSystemAccessRule($username,"FullControl","Allow")}
 
 $acl.SetAccessRule($AccessRule)
 
-$acl.SetAccessRuleProtection($true, $false)
+
+
+# ACL setzen:
+$acl | Set-Acl -path $path
+
+
+
+
+"
+
+
+Vererbung bei Subfolder aktivieren ? 
+"
+$confirm = read-host -prompt "hit enter to continue"
+
+
+
+$subf=gci -force -Recurse -path $path
+$subf | ForEach-Object {
+
+ $acl = get-acl $_.Fullname
+$acl.SetAccessRuleProtection($false,$false) 
+$_.FullName
+$acl| set-acl  $_.FullName }
+
+
 }
+
+
+if(( $showrights -or $setfullrights -or $all -or $takeownership ) -and !$delete){
+
+
+
+"ACL now:"
+get-acl $path | fl
+(get-acl $path).Access
+
+
+}
+
+
+
 
 if( $delete -or $all){
 $confirm = read-host -prompt "WIRKLICH ALLES LÖSCHEN ? JA oder beliege Taste um abzubrechen"
@@ -104,16 +173,6 @@ remove-item -recurse -force $path
 }}
 
 
-if(( $showrights -or $setfullrights -or $all -or $takeownership ) -and !$delete){
-
-
-
-"ACL now:"
-get-acl $path | fl
-(get-acl $path).Access
-#(get-acl ( $path + "\Contacts" ) ).Access
-
-}
 
 
 
